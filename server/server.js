@@ -5,26 +5,60 @@ require("dotenv").config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+/* ======================
+   CORS CONFIG (PRODUCTION SAFE)
+====================== */
+
+const allowedOrigins = [
+  "https://hierarchy-management-one.vercel.app"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  })
+);
+
+// Handle preflight
+app.options("*", cors());
+
 app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
+/* ======================
+   MONGODB CONNECTION
+====================== */
+
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
-  .catch(err => {
+  .catch((err) => {
     console.error("MongoDB connection error:", err);
     process.exit(1);
   });
 
-// Root Route
+/* ======================
+   ROOT ROUTE
+====================== */
+
 app.get("/", (req, res) => {
   res.send("API Running");
 });
 
-// ==================
-// Mongoose Schema
-// ==================
+/* ======================
+   SCHEMA
+====================== */
+
 const PersonSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -43,9 +77,10 @@ const PersonSchema = new mongoose.Schema({
 
 const Person = mongoose.model("Person", PersonSchema);
 
-// ==================
-// Create Person
-// ==================
+/* ======================
+   CREATE PERSON
+====================== */
+
 app.post("/api/people", async (req, res) => {
   try {
     const person = await Person.create(req.body);
@@ -56,9 +91,10 @@ app.post("/api/people", async (req, res) => {
   }
 });
 
-// ==================
-// Get Children
-// ==================
+/* ======================
+   GET CHILDREN
+====================== */
+
 app.get("/api/people/children/:parentId", async (req, res) => {
   try {
     const { parentId } = req.params;
@@ -83,9 +119,11 @@ app.get("/api/people/children/:parentId", async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
-// ==================
-// Search People
-// ==================
+
+/* ======================
+   SEARCH PEOPLE
+====================== */
+
 app.get("/api/people/search/:name", async (req, res) => {
   try {
     const people = await Person.find({
@@ -93,17 +131,18 @@ app.get("/api/people/search/:name", async (req, res) => {
     });
 
     res.json(people);
-
   } catch (err) {
     console.error("Search error:", err);
     res.status(500).json({ error: "Search failed" });
   }
 });
 
-// ==================
-// Start Server
-// ==================
+/* ======================
+   START SERVER
+====================== */
+
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
