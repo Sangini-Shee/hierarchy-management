@@ -63,23 +63,26 @@ app.get("/api/people/children/:parentId", async (req, res) => {
   try {
     const { parentId } = req.params;
 
-    let filter;
+    let filter = {};
 
-    if (parentId === "null") {
-      filter = { parentId: null };
+    if (!parentId || parentId === "null") {
+      filter.parentId = null;
     } else {
-      filter = { parentId: new mongoose.Types.ObjectId(parentId) };
+      if (!mongoose.Types.ObjectId.isValid(parentId)) {
+        return res.status(400).json({ error: "Invalid parentId" });
+      }
+
+      filter.parentId = new mongoose.Types.ObjectId(parentId);
     }
 
     const children = await Person.find(filter);
-    res.json(children);
+    return res.json(children);
 
   } catch (err) {
-    console.error("Children route error:", err);
-    res.status(500).json({ error: "Server error while fetching children" });
+    console.error("Children route crash:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 });
-
 // ==================
 // Search People
 // ==================
